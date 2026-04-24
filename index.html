@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Python Requirements Checker</title>
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Custom Tailwind config -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            critical: { DEFAULT: '#dc2626', light: '#fef2f2', border: '#fca5a5' },
+            high:     { DEFAULT: '#ea580c', light: '#fff7ed', border: '#fdba74' },
+            medium:   { DEFAULT: '#ca8a04', light: '#fefce8', border: '#fde047' },
+            low:      { DEFAULT: '#16a34a', light: '#f0fdf4', border: '#86efac' },
+            safe:     { DEFAULT: '#2563eb', light: '#eff6ff', border: '#93c5fd' },
+          }
+        }
+      }
+    }
+  </script>
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body class="min-h-full bg-gray-50 text-gray-900 font-sans antialiased">
+
+  <!-- ─── Header ─────────────────────────────────────────────────────────── -->
+  <header class="bg-white border-b border-gray-200 sticky top-0 z-10">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <!-- Python-style snake icon (SVG inline) -->
+        <svg class="w-8 h-8 text-blue-600" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="48" height="48" rx="12" fill="currentColor" fill-opacity="0.1"/>
+          <path d="M24 8C15.163 8 15.5 12.25 15.5 12.25V16.5H24.25V17.75H12.25C12.25 17.75 8 17.337 8 26.25C8 35.163 11.75 34.75 11.75 34.75H14.25V30.25C14.25 30.25 14.087 26.5 18 26.5H29.75C29.75 26.5 33.5 26.587 33.5 23V13.5C33.5 13.5 34.087 8 24 8ZM19.25 11.75C20.077 11.75 20.75 12.423 20.75 13.25C20.75 14.077 20.077 14.75 19.25 14.75C18.423 14.75 17.75 14.077 17.75 13.25C17.75 12.423 18.423 11.75 19.25 11.75Z" fill="#3b82f6"/>
+          <path d="M24 40C32.837 40 32.5 35.75 32.5 35.75V31.5H23.75V30.25H35.75C35.75 30.25 40 30.663 40 21.75C40 12.837 36.25 13.25 36.25 13.25H33.75V17.75C33.75 17.75 33.913 21.5 30 21.5H18.25C18.25 21.5 14.5 21.413 14.5 25V34.5C14.5 34.5 13.913 40 24 40ZM28.75 36.25C27.923 36.25 27.25 35.577 27.25 34.75C27.25 33.923 27.923 33.25 28.75 33.25C29.577 33.25 30.25 33.923 30.25 34.75C30.25 35.577 29.577 36.25 28.75 36.25Z" fill="#facc15"/>
+        </svg>
+        <div>
+          <h1 class="text-lg font-semibold leading-tight text-gray-900">Requirements Checker</h1>
+          <p class="text-xs text-gray-500 leading-tight">Python dependency auditor</p>
+        </div>
+      </div>
+
+      <!-- Stats bar (hidden until results load) -->
+      <div id="stats-bar" class="hidden flex items-center gap-4 text-sm">
+        <span id="stat-total"   class="text-gray-600"></span>
+        <span id="stat-outdated" class="font-medium text-orange-600"></span>
+        <span id="stat-vuln"    class="font-medium text-red-600"></span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ─── Main ────────────────────────────────────────────────────────────── -->
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+
+    <!-- Drop zone -->
+    <section
+      id="drop-zone"
+      aria-label="File drop zone"
+      class="drop-zone relative flex flex-col items-center justify-center gap-4
+             border-2 border-dashed border-gray-300 rounded-2xl
+             bg-white p-12 text-center cursor-pointer
+             transition-all duration-200
+             hover:border-blue-400 hover:bg-blue-50/40"
+    >
+      <!-- File input (hidden, triggered by click) -->
+      <input
+        id="file-input"
+        type="file"
+        accept=".txt,text/plain"
+        class="absolute inset-0 opacity-0 cursor-pointer"
+        aria-label="Upload requirements.txt"
+      />
+
+      <!-- Icon -->
+      <div class="pointer-events-none">
+        <svg class="w-12 h-12 mx-auto text-blue-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+        </svg>
+        <p class="text-base font-medium text-gray-700">Drop your <code class="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-sm">requirements.txt</code> here</p>
+        <p class="text-sm text-gray-400 mt-1">or click to browse &mdash; processed entirely in your browser</p>
+      </div>
+
+      <!-- Try sample link -->
+      <button
+        id="sample-btn"
+        type="button"
+        class="pointer-events-auto mt-2 text-xs text-blue-500 underline underline-offset-2 hover:text-blue-700 z-10"
+      >
+        Try with a sample file
+      </button>
+    </section>
+
+    <!-- Progress / status -->
+    <div id="progress-section" class="hidden space-y-3">
+      <div class="flex items-center justify-between text-sm text-gray-600">
+        <span id="progress-label">Checking packages…</span>
+        <span id="progress-count" class="font-mono font-medium text-gray-700"></span>
+      </div>
+      <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+        <div id="progress-bar" class="h-2 bg-blue-500 rounded-full transition-all duration-300" style="width:0%"></div>
+      </div>
+    </div>
+
+    <!-- Results section -->
+    <section id="results-section" class="hidden space-y-4">
+
+      <!-- Toolbar -->
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-2 flex-wrap">
+          <!-- Filter buttons -->
+          <span class="text-sm text-gray-500 mr-1">Filter:</span>
+          <button data-filter="all"      class="filter-btn active-filter" >All</button>
+          <button data-filter="critical" class="filter-btn">Critical</button>
+          <button data-filter="high"     class="filter-btn">High</button>
+          <button data-filter="medium"   class="filter-btn">Medium</button>
+          <button data-filter="low"      class="filter-btn">Low</button>
+          <button data-filter="safe"     class="filter-btn">Up-to-date</button>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <!-- Search -->
+          <div class="relative">
+            <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/>
+            </svg>
+            <input
+              id="search-input"
+              type="search"
+              placeholder="Search packages…"
+              class="pl-7 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-44"
+            />
+          </div>
+
+          <!-- Download button -->
+          <button
+            id="download-btn"
+            class="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium
+                   bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors
+                   disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+            Download updated
+          </button>
+
+          <!-- Reset button -->
+          <button
+            id="reset-btn"
+            class="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium
+                   text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+            </svg>
+            New file
+          </button>
+        </div>
+      </div>
+
+      <!-- Table wrapper -->
+      <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm" id="results-table">
+            <thead class="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th class="th-cell w-8">
+                  <input type="checkbox" id="select-all" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                </th>
+                <th class="th-cell sortable" data-col="name">Package</th>
+                <th class="th-cell sortable" data-col="current">Pinned</th>
+                <th class="th-cell sortable" data-col="latest">Latest</th>
+                <th class="th-cell sortable text-center" data-col="severity">Severity</th>
+                <th class="th-cell sortable text-center" data-col="vulns">Vulns</th>
+                <th class="th-cell">Links</th>
+              </tr>
+            </thead>
+            <tbody id="results-body" class="divide-y divide-gray-100"></tbody>
+          </table>
+        </div>
+
+        <!-- Empty state (shown when filter returns nothing) -->
+        <div id="empty-filter" class="hidden py-12 text-center text-gray-400 text-sm">
+          No packages match the current filter.
+        </div>
+      </div>
+
+      <!-- Footer note -->
+      <p class="text-xs text-gray-400 text-center">
+        Vulnerability data from <a href="https://osv.dev" target="_blank" rel="noopener" class="underline hover:text-gray-600">OSV.dev</a> &bull;
+        Package data from <a href="https://pypi.org" target="_blank" rel="noopener" class="underline hover:text-gray-600">PyPI</a> &bull;
+        All processing happens in your browser — no data leaves your machine.
+      </p>
+    </section>
+
+  </main>
+
+  <!-- ─── Toast notifications ─────────────────────────────────────────────── -->
+  <div id="toast-container" class="fixed bottom-6 right-6 space-y-2 z-50 pointer-events-none"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
