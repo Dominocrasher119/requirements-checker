@@ -731,11 +731,50 @@ async function handleFile(file) {
 }
 
 /**
+ * Validates if the content looks like a requirements.txt file.
+ * A valid requirements.txt must have at least one line with a version specifier.
+ * @param {string} text
+ * @returns {boolean}
+ */
+function isValidRequirementsFile(text) {
+  const lines = text.split('\n');
+  let linesWithVersion = 0;
+
+  for (const raw of lines) {
+    const line = raw.trim();
+
+    // Skip empty lines and comments
+    if (!line || line.startsWith('#')) continue;
+
+    // Options (-r, -e, --index-url, etc.) are valid but don't count as packages
+    if (line.startsWith('-')) continue;
+
+    // Check if line has a version specifier (==, >=, <=, ~=, !=, >, <)
+    // This is the key: a real requirements.txt almost always specifies versions
+    const hasVersionSpecifier = /^[A-Za-z0-9]([A-Za-z0-9._-]*[A-Za-z0-9])?(\[[^\]]+\])?\s*(==|>=|<=|~=|!=|>|<)\s*[^\s#;]+/.test(line);
+
+    if (hasVersionSpecifier) {
+      linesWithVersion++;
+    }
+  }
+
+  // Must have at least one line with a version specifier
+  return linesWithVersion > 0;
+}
+
+/**
  * Entry point when raw text is available (from file or sample).
  * @param {string} text
  */
 async function handleText(text) {
   rawLines = text.split('\n');
+
+  // Validate that this looks like a requirements.txt file
+  if (!isValidRequirementsFile(text)) {
+    showToast('This doesn\'t look like a valid requirements.txt file. Please upload a proper Python requirements file.', 'error');
+    return;
+  }
+
   const packages = parseRequirements(text);
 
   if (packages.length === 0) {
